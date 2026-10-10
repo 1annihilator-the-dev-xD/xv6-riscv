@@ -110,3 +110,17 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_interpose(void)
+{
+  struct proc *p = myproc();
+  if(p->mask!=0) return -1; //checks if this process already had some syscalls blocked
+  int n;
+  argint(0,&n); //to get the mask integer
+  char path[MAXPATH];
+  argstr(1,path,MAXPATH); //to get the string for path
+  safestrcpy(p->allowedPath, path,MAXPATH); 
+  p->mask = n;
+  return 0; 
+}
