@@ -104,7 +104,7 @@ run_exec(char *execArgs[], char *path)
     exit(1);
   } else if (pid == 0) {
     execArgs[execArgsLen] = path;
-    execArgs[execArgsLen + 1] = NULL;
+    execArgs[execArgsLen + 1] = 0;
     exec(execArgs[0], execArgs);
     fprintf(2, "exec failed\n");
     exit(1);

@@ -282,11 +282,8 @@ UPROGS += \
 endif
 
 UEXTRA=
-ifeq ($(LAB),util)
-	UEXTRA += user/findtest.sh
-	UEXTRA += user/sixfive.txt
-	UPROGS += $U/_memdump
-endif
+UEXTRA += user/findtest.sh
+UEXTRA += user/sixfive.txt
 ifeq ($(LAB),syscall)
 	UEXTRA += user/exec.sh
 endif
