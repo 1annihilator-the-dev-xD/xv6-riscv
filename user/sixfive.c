@@ -9,12 +9,15 @@ void scan(int fd);
 int
 main(int argc, char *argv[])
 {
-  if (argc==1) {
-    int fd = 0; //stdin
+  if (argc == 1) {
+    int fd = 0; // Standard input (stdin)
     scan(fd);
     return 0;
   }
+  
+  // Iterate through command-line arguments to process each file
   for (int i = 1; i < argc; i++) {
+    // SYSTEM CALL ERROR HANDLING: Check if open() fails (-1)
     int fd = open(argv[i], O_RDONLY);
     if (fd == -1) {
       fprintf(2, "sixfive: cannot open %s\n", argv[i]);
@@ -39,19 +42,22 @@ void
 scan(int fd)
 {
   char c;
-  short int in_token = 0; //basically a short int is a bool here
-  short int all_digits = 1;
+  short int in_token = 0; // Acts as a boolean flag tracking if we are inside a token
+  short int all_digits = 1; // Tracks if the current token consists strictly of digits
   int running_sum = 0;
+  
   while (1) {
+    // SYSTEM CALL ERROR HANDLING: Read character-by-character and check return value
     int n = read(fd, &c, 1);
     if (n == 0)
-      break;
-    else if (n == -1)
-    {
+      break; // End of file (EOF) reached cleanly
+    else if (n == -1) {
       fprintf(2, "Read failed.\n");
-      break;
+      break; // Read system call error encountered
     }  
-    if (strchr(" -\r\t\n./,", c) == NULL) //if this character is not a seperator
+    
+    // Check if the character is a non-separator token character
+    if (strchr(" -\r\t\n./,", c) == NULL)
     {
       in_token = 1;
       if (isDigit(c)) {
@@ -62,14 +68,17 @@ scan(int fd)
         continue;
       }
     } else {
+      // Separator encountered: evaluate completed token
       if (in_token == 1 && all_digits == 1 &&
-                     (running_sum % 6 == 0 || running_sum % 5 == 0))
+                    (running_sum % 6 == 0 || running_sum % 5 == 0))
         printf("%d\n", running_sum);
       in_token = 0;
       all_digits = 1;
       running_sum = 0;
     }
   }
+  
+  // Final evaluation in case the stream ends without a trailing separator
   if (in_token == 1 && all_digits == 1 &&
       (running_sum % 5 == 0 || running_sum % 6 == 0)) {
     in_token = 0;
@@ -77,5 +86,6 @@ scan(int fd)
     printf("%d\n", running_sum);
     running_sum = 0;
   }
+  
   close(fd);
 }

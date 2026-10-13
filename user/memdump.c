@@ -62,22 +62,35 @@ memdump(char *fmt, char *data, int len)
 {
   int i = 0;
   int j = 0;
+  
+  // Iterate through each formatting character in the format string
   while (fmt[i] != '\0') {
+    
+    // FORMAT 'i': Integer (4 bytes)
     if (fmt[i] == 'i') {
+      // BOUNDS CHECK: Ensure at least 4 bytes remain in the data buffer
       if (j + 4 > len) {
         fprintf(2, "memdump: not enough data for '%c'\n", fmt[i]);
         return;
       }
+      
+      // Reconstruct a 32-bit integer from raw bytes using little-endian byte ordering
       int temp = (unsigned char)data[j] | (unsigned char)data[j + 1] << 8 |
                  (unsigned char)data[j + 2] << 16 |
                  (unsigned char)data[j + 3] << 24;
       j += 4;
       printf("%d\n", temp);
-    } else if (fmt[i] == 'p') {
+    } 
+    
+    // FORMAT 'p': Pointer / 64-bit value (8 bytes)
+    else if (fmt[i] == 'p') {
+      // BOUNDS CHECK: Ensure at least 8 bytes remain in the data buffer
       if (j + 8 > len) {
         fprintf(2, "memdump: not enough data for '%c'\n", fmt[i]);
         return;
       }
+      
+      // Reconstruct a 64-bit value from raw bytes
       long int temp = (long)(unsigned char)data[j] |
                       (long)(unsigned char)data[j + 1] << 8 |
                       (long)(unsigned char)data[j + 2] << 16 |
@@ -87,30 +100,46 @@ memdump(char *fmt, char *data, int len)
                       (long)(unsigned char)data[j + 6] << 48 |
                       (long)(unsigned char)data[j + 7] << 56;
       j += 8;
+      
       unsigned int high = (unsigned int)(temp >> 32);
       unsigned int low = (unsigned int)temp;
-      printf("%x%x\n", high, low); //prints in hex
-    } else if (fmt[i] == 'h') {
+      printf("%x%x\n", high, low); // Prints the pointer/64-bit value in hex
+    } 
+    
+    // FORMAT 'h': Short integer (2 bytes)
+    else if (fmt[i] == 'h') {
+      // BOUNDS CHECK: Ensure at least 2 bytes remain in the data buffer
       if (j + 2 > len) {
         fprintf(2, "memdump: not enough data for '%c'\n", fmt[i]);
         return;
       }
+      
       int temp =
         (short)(unsigned char)data[j] | (short)(unsigned char)data[j + 1] << 8;
       j += 2;
       printf("%d\n", temp);
-    } else if (fmt[i] == 'c') {
+    } 
+    
+    // FORMAT 'c': Single character (1 byte)
+    else if (fmt[i] == 'c') {
+      // BOUNDS CHECK: Ensure at least 1 byte remains in the data buffer
       if (j + 1 > len) {
         fprintf(2, "memdump: not enough data for '%c'\n", fmt[i]);
         return;
       }
+      
       printf("%c\n", data[j]);
       j++;
-    } else if (fmt[i] == 's') {
+    } 
+    
+    // FORMAT 's': String pointer (reads an 8-byte pointer value, then prints the string it points to)
+    else if (fmt[i] == 's') {
+      // BOUNDS CHECK: Ensure at least 8 bytes remain to read the pointer address
       if (j + 8 > len) {
         fprintf(2, "memdump: not enough data for '%c'\n", fmt[i]);
         return;
       }
+      
       long int temp = (long)(unsigned char)data[j] |
                       (long)(unsigned char)data[j + 1] << 8 |
                       (long)(unsigned char)data[j + 2] << 16 |
@@ -120,14 +149,21 @@ memdump(char *fmt, char *data, int len)
                       (long)(unsigned char)data[j + 6] << 48 |
                       (long)(unsigned char)data[j + 7] << 56;
       j += 8;
+      
       char *str = (char *)temp;
       printf("%s\n", str);
-    } else if (fmt[i] == 'S') {
+    } 
+    
+    // FORMAT 'S': Inline null-terminated string stream (prints characters directly from buffer until '\0')
+    else if (fmt[i] == 'S') {
       for (int k = j; k < len && data[k] != '\0'; k++) {
         printf("%c", data[k]);
       }
       printf("%c", '\n');
-    } else {
+    } 
+    
+    // Invalid format specifier catch
+    else {
       fprintf(2, "Error: Format '%c' not valid.", fmt[i]);
       return;
     }

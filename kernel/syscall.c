@@ -150,21 +150,21 @@ syscall(void)
     int rs_mask = p->mask >> num; //I'll right shift the mask by the syscall number and then check the LSB
     if ((rs_mask & 1) == 1) // if yes, this is a restricted syscall
     {
-      if(num == SYS_exec || num == SYS_open)
+      if(num == SYS_exec || num == SYS_open) //I'll check if it's exec or open since those are the path-based syscalls we want to sandbox
       {
         char buf[MAXPATH];
-        if(argstr(0,buf,MAXPATH) < 0 || strncmp(p->allowedPath,buf,MAXPATH)!=0) 
+        if(argstr(0,buf,MAXPATH) < 0 || strncmp(p->allowedPath,buf,MAXPATH)!=0)  //I'll fetch the target path argument and verify if it matches the process's allowed sandbox path
         {
-          p->trapframe->a0 = -1;
+          p->trapframe->a0 = -1; //I'll block the system call and return -1 if the path check fails
         }
         else
-          p->trapframe->a0 = syscalls[num]();
+          p->trapframe->a0 = syscalls[num](); //I'll execute the syscall normally if the path validation passes
       }
       else
-        p->trapframe->a0 = -1;
+        p->trapframe->a0 = -1; //I'll block any other restricted syscalls outright since they aren't whitelisted for sandboxing here
     }
     else
-      p->trapframe->a0 = syscalls[num]();
+      p->trapframe->a0 = syscalls[num](); //I'll execute the syscall normally if it isn't marked as restricted in the mask
   } else {
     printk("%d %s: unknown sys call %d\n", p->pid, p->name, num);
     p->trapframe->a0 = -1;
