@@ -1,0 +1,11 @@
+usertrap() called syscall(), as confirmed by the backtrace (#0 syscall(), #1 usertrap() at kernel/trap.c:68).
+
+It holds the system call number (e.g., 0xf for SYS_open when init opens "console"), which is loaded into a7 by the user-space stub before executing ecall.
+
+User mode. The sstatus register value 0x200000022 has its SPP bit (bit 8) set to 0, indicating the trap originated from user mode.
+
+With a null pointer dereference substituted for num, the faulting instruction is lw a3,0(zero) at sepc = 0x80001d92, where a3 corresponds to num.
+
+Address zero lacks a mapping in the kernel page table, triggering a load page fault (scause = 0xd, stval = 0) that kerneltrap treats as a fatal kernel panic.
+
+The process was "init" with PID 1.
