@@ -61,3 +61,12 @@
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
+
+// read-only page shared between kernel and user (speeds up getpid()).
+#define USYSCALL (TRAPFRAME - PGSIZE)
+
+#ifndef __ASSEMBLER__
+struct usyscall {
+  int pid; // process ID
+};
+#endif

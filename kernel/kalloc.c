@@ -23,13 +23,23 @@ struct {
   struct run *freelist;
 } kmem;
 
+// separate pool of 2MB superpages, carved off the top of RAM.
+struct {
+  struct spinlock lock;
+  struct run *freelist;
+} skmem;
+
+#define SUPERBASE (PHYSTOP - (uint64)NSUPERPG * SUPERPGSIZE)
+
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
-  freerange(end, (void *)PHYSTOP);
+  initlock(&skmem.lock, "skmem");
+  freerange(end, (void *)SUPERBASE);
+  for (uint64 p = SUPERBASE; p + SUPERPGSIZE <= PHYSTOP; p += SUPERPGSIZE)
+    superfree((void *)p);
 }
-
 
 void
 freerange(void *pa_start, void *pa_end)
@@ -89,3 +99,39 @@ kalloc(void)
   return (void *)r;
 }
 
+
+// Free a 2MB superpage previously returned by superalloc().
+void
+superfree(void *pa)
+{
+  struct run *r;
+
+  if (((uint64)pa % SUPERPGSIZE) != 0 || (uint64)pa < SUPERBASE ||
+      (uint64)pa >= PHYSTOP)
+    panic("superfree");
+
+  r = (struct run *)pa;
+
+  acquire(&skmem.lock);
+  r->next = skmem.freelist;
+  skmem.freelist = r;
+  release(&skmem.lock);
+}
+
+// Allocate one zeroed 2MB, 2MB-aligned superpage.
+// Returns 0 if none are left.
+void *
+superalloc(void)
+{
+  struct run *r;
+
+  acquire(&skmem.lock);
+  r = skmem.freelist;
+  if (r)
+    skmem.freelist = r->next;
+  release(&skmem.lock);
+
+  if (r)
+    memset((char *)r, 0, SUPERPGSIZE);
+  return (void *)r;
+}

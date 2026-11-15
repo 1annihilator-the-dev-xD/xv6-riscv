@@ -124,3 +124,43 @@ sys_interpose(void)
   p->mask = n;
   return 0; 
 }
+
+// pgaccess(base, len, mask): report which of the len pages starting at
+// base have been accessed since the last call (PTE_A), as a bitmask
+// copied to the user address mask. PTE_A is cleared after it is read.
+uint64
+sys_pgaccess(void)
+{
+  uint64 base, ubuf;
+  int len;
+  uint64 mask = 0;
+  struct proc *p = myproc();
+
+  argaddr(0, &base);
+  argint(1, &len);
+  argaddr(2, &ubuf);
+
+  // bitmask is at most 64 bits wide.
+  if (len < 0 || len > 64)
+    return -1;
+
+  for (int i = 0; i < len; i++) {
+    uint64 va = PGROUNDDOWN(base) + (uint64)i * PGSIZE;
+    if (va >= MAXVA)
+      return -1;
+    pte_t *pte = walk(p->pagetable, va, 0);
+    if (pte == 0 || (*pte & PTE_V) == 0)
+      continue;
+    if (*pte & PTE_A) {
+      mask |= 1ULL << i;
+      *pte &= ~PTE_A; // clear so the next call sees only new accesses
+    }
+  }
+  // the TLB may cache PTE_A already set; flush so future accesses set it again.
+  sfence_vma();
+
+  // copy only as many bytes as the caller's buffer holds.
+  if (copyout(p->pagetable, p->sz, ubuf, (char *)&mask, (len + 7) / 8) < 0)
+    return -1;
+  return 0;
+}

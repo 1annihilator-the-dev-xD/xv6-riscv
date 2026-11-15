@@ -3,6 +3,7 @@
 #include "kernel/fcntl.h"
 #include "kernel/riscv.h"
 #include "kernel/vm.h"
+#include "kernel/memlayout.h"
 #include "user/user.h"
 
 //
@@ -147,6 +148,14 @@ void *
 memcpy(void *dst, const void *src, uint n)
 {
   return memmove(dst, src, n);
+}
+
+// read the pid from the shared USYSCALL page; no system call needed.
+int
+ugetpid(void)
+{
+  struct usyscall *u = (struct usyscall *)USYSCALL;
+  return u->pid;
 }
 
 char *
