@@ -1,0 +1,35 @@
+Lab: page tables (pgtbl) -- answers
+
+Speed up system calls:
+Which other xv6 system call(s) could be made faster using this shared page?
+- uptime(): the kernel could keep a copy of "ticks" in the shared page (updated
+  on every timer tick) so user code reads it directly instead of trapping.
+  Any call that only returns read-only kernel state, takes no arguments, and
+  has no side effects is a candidate. getpid() is the simplest because the pid
+  never changes for the life of a process. Calls that take arguments, change
+  kernel state, or need permission checks (read, write, kill, ...) cannot use
+  this trick.
+
+Print a page table (vmprint of the first process, init):
+- The printout walks the three Sv39 levels from Figure 3.4: the root page
+  table has one valid entry for the low addresses (index 0), which points to a
+  level-1 table, which points to a level-0 table holding the user pages; the
+  high entry (index 255 -> 511) leads to the trampoline, trapframe and
+  usyscall pages.
+- Page 0 holds the program text and data (flags V R W X U).
+- Page 1 is the guard page below the stack: valid but without PTE_U, so
+  user code cannot read or write it (an access traps).
+- Page 2 is the user stack (V R W X U).
+- The last pages: trampoline (R X, no U), trapframe (R W, no U), and, third
+  from last, the usyscall page (R U) that ugetpid() reads.
+
+Detect which pages have been accessed (pgaccess):
+- Implemented with the PTE_A bit (bit 6). The kernel reads and then clears it,
+  and flushes the TLB with sfence_vma so the hardware sets it again on the
+  next access.
+
+Superpages:
+- A separate pool of 2MB pages is reserved at the top of RAM. uvmalloc maps a
+  level-1 leaf PTE whenever the address is 2MB-aligned and a full 2MB fits.
+  uvmunmap frees whole superpages and splits (demotes) a superpage if only
+  part of it is unmapped. uvmcopy copies a superpage into a fresh superpage.
